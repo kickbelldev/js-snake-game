@@ -46,11 +46,12 @@ class Snake {
   }
 
   isCollapsed = () => { // 뱀 몸체와 머리가 충돌했는지 확인
-    this.snake.forEach(({x, y}) => {
-      if (x === this.snake[0].x && y === this.snake[0].y) {
+    for (let i = 1; i < this.snake.length; i++) {
+      if (this.snake[i]?.x === this.snake[0].x && this.snake[i]?.y === this.snake[0].y) {
+        console.log('?')
         return true
       }
-    })
+    }
     return false
   }
 
@@ -131,8 +132,11 @@ function initialize () { // 말 그대로 객체 초기화
   }
 }
 
-function gameOver () { // 게임 오버 함수
-  window.alert(`${score} 점을 획득했습니다.`)
+function checkgameover () { // 게임 오버 체크 함수
+  if (snake.isCollapsed() || snake.isOut()) {
+    window.alert(`${score} 점을 획득했습니다.`)
+    clearInterval(interval)
+  }
 }
 
 function process () { // 게임 진행
@@ -142,6 +146,9 @@ function process () { // 게임 진행
       score++
       
       snake.grow()
+
+      checkgameover()
+
       snake.draw()
 
       apple.makeApple()
@@ -149,11 +156,8 @@ function process () { // 게임 진행
     } else {
       snake.clear()
       snake.move()
+      checkgameover()
       snake.draw()
-    }
-    if (snake.isCollapsed() || snake.isOut()) {
-      gameOver()
-      clearInterval(interval)
     }
   }, 200)
 }
@@ -196,4 +200,3 @@ function start () { // 게임 시작
   }
   process()
 }
-
