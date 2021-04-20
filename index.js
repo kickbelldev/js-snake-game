@@ -1,5 +1,10 @@
-const canvas = document.getElementById("board");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("board")
+const ctx = canvas.getContext("2d")
+const scoreDiv = document.getElementById(`score`)
+
+const canvasSize = 500
+const cellSize = 25
+const tick = 200
 
 class Snake {
   snake = [{}]
@@ -9,21 +14,22 @@ class Snake {
     this.snake[0].y = y
   }
 
-  draw = () => { // 머리부분을 그리는 메소드
+  drawHead = () => {
     ctx.fillStyle = '#fff'
 
-    const headX = this.snake[0].x * 25
-    const headY = this.snake[0].y * 25
-    ctx.fillRect(headX, headY, 25, 25)
+    const headX = this.snake[0].x * cellSize
+    const headY = this.snake[0].y * cellSize
+    ctx.fillRect(headX, headY, cellSize, cellSize)
   }
 
-  clear = () => { // 꼬리부분을 지우는 메소드
-    const tailX = this.snake[this.snake.length - 1].x * 25
-    const tailY = this.snake[this.snake.length - 1].y * 25
-    ctx.clearRect(tailX, tailY, 25, 25)
+  clearTail = ({x, y}) => {
+    const tailX = x * cellSize
+    const tailY = y * cellSize
+    ctx.clearRect(tailX, tailY, cellSize, cellSize)
   }
 
-  move = () => { // 뱀이 움직이는 메소드
+  growHead = () => { // 뱀이 앞으로 한 칸 길어지는 메소드
+
     const dx = [0, 1, 0, -1]
     const dy = [-1, 0, 1, 0]
     const head = {
@@ -32,25 +38,19 @@ class Snake {
     }
 
     this.snake.unshift(head)
-    this.snake.pop()
+
+    this.drawHead()
   }
 
-  grow = () => { // 뱀이 길어지는 메소드
-    const dx = [0, 1, 0, -1]
-    const dy = [-1, 0, 1, 0]
-    const head = {
-      x: this.snake[0].x + dx[direction],
-      y: this.snake[0].y + dy[direction]
-    }
-    this.snake.unshift(head)
+  popTail = () => { // 뱀의 꼬리가 한 칸 없어지는 메소드
+    const tail = this.snake.pop()
+
+    this.clearTail(tail)
   }
 
   isCollapsed = () => { // 뱀 몸체와 머리가 충돌했는지 확인
     for (let i = 1; i < this.snake.length; i++) {
-      if (this.snake[i]?.x === this.snake[0].x && this.snake[i]?.y === this.snake[0].y) {
-        console.log('?')
-        return true
-      }
+      if (this.snake[i]?.x === this.snake[0].x && this.snake[i]?.y === this.snake[0].y) return true
     }
     return false
   }
@@ -100,22 +100,61 @@ class Apple {
   draw = () => { // 사과 그리기
     ctx.fillStyle = '#f00'
 
-    const x = this.x * 25
-    const y = this.y * 25
-    ctx.fillRect(x, y, 25, 25)
+    const x = this.x * cellSize
+    const y = this.y * cellSize
+    ctx.fillRect(x, y, cellSize, cellSize)
   }
 }
 
-let direction = 0
+let direction
 let score = 0
-let isStart = false
+let isStarted = false
 let interval
 let snake
 let apple
-// 이 코드들의 위치가 여기가 맞나 싶네요?..
+// 이 코드들의 위치가 여기가 맞나 싶네
 
 function random () { // 랜덤 좌표값
-  return Math.floor(Math.random() * 20)
+  return Math.floor(Math.random() * canvasSize / cellSize)
+}
+
+
+function checkgameover () { // 게임 오버 체크 함수
+  if (snake.isCollapsed() || snake.isOut()) {
+    window.alert(`${score} 점을 획득했습니다.`)
+    clearGame()
+    initialize()
+    return true
+  }
+}
+
+function process () { // 게임 진행
+  isStarted = true
+  interval = setInterval(() => {
+    if (snake.isBite(apple.x, apple.y)) {
+      score++
+      scoreDiv.innerText = `Score: ${score}`
+      
+      apple.makeApple()
+      apple.draw()
+
+      snake.growHead()
+
+      checkgameover()
+
+    } else {
+      snake.growHead()
+      checkgameover() || snake.popTail()
+    }
+  }, tick)
+}
+
+function clearGame () {
+  clearInterval(interval)
+  ctx.clearRect(0, 0, 500, 500)
+  score = 0
+  scoreDiv.innerText = `Score: 0`
+  isStarted = false
 }
 
 function initialize () { // 말 그대로 객체 초기화
@@ -125,78 +164,39 @@ function initialize () { // 말 그대로 객체 초기화
     const appleX = random()
     const appleY = random()
     if (snakeX !== appleX && snakeY !== appleY) {
+      delete snake
+      delete apple
+
       snake = new Snake(snakeX, snakeY)
       apple = new Apple(appleX, appleY)
-      return
-    }
-  }
-}
 
-function checkgameover () { // 게임 오버 체크 함수
-  if (snake.isCollapsed() || snake.isOut()) {
-    window.alert(`${score} 점을 획득했습니다.`)
-    clearInterval(interval)
-  }
-}
-
-function process () { // 게임 진행
-  isStart = true
-  interval = setInterval(() => {
-    if (snake.isBite(apple.x, apple.y)) {
-      score++
-      
-      snake.grow()
-
-      checkgameover()
-
-      snake.draw()
-
-      apple.makeApple()
+      snake.drawHead()
       apple.draw()
-    } else {
-      snake.clear()
-      snake.move()
-      checkgameover()
-      snake.draw()
-    }
-  }, 200)
-}
 
-function clearGame () {
-  ctx.clearRect(0, 0, 500, 500)
-  score = 0
-  isStart = false
-  clearInterval(interval)
+      break
+    }
+  }
 }
 
 function load () {
   initialize()
-  snake.draw()
-  apple.draw()
 }
 
-function start () { // 게임 시작
-  if (isStart) {
-    clearGame()
-    initialize()
-    snake.draw()
-    apple.draw()
+window.onkeydown = ( event ) => {
+  
+  switch (event.keyCode) {
+    case 38:
+      if (direction !== 2) direction = 0
+      break
+    case 39:
+      if (direction !== 3) direction = 1
+      break
+    case 40:
+      if (direction !== 0) direction = 2
+      break
+    case 37:
+      if (direction !== 1) direction = 3
+      break
   }
-  window.onkeydown = ( event ) => {
-    switch (event.keyCode) {
-      case 38:
-        if (direction !== 2) direction = 0
-        break
-      case 39:
-        if (direction !== 3) direction = 1
-        break
-      case 40:
-        if (direction !== 0) direction = 2
-        break
-      case 37:
-        if (direction !== 1) direction = 3
-        break
-    }
-  }
-  process()
+  37 <= event.keyCode && event.keyCode <= 40 && !isStarted && process()
 }
